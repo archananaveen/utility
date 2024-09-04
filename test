@@ -1,0 +1,3 @@
+index="your_index" sourcetype="your_sourcetype"
+| spath input=_raw path="hostname"
+| table _time hostname event_field1 event_field2
