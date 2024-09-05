@@ -7,3 +7,5 @@ index="your_index" sourcetype="your_sourcetype"
     Name        modify
     Match       *
     Add         hostname ${HOSTNAME}
+
+(raw LIKE "%memory%" OR raw LIKE "%out of memory%" OR raw LIKE "%OOM%")
