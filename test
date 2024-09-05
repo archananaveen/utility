@@ -10,3 +10,5 @@ index="your_index" sourcetype="your_sourcetype"
 
 (raw LIKE "%memory%" OR raw LIKE "%out of memory%" OR raw LIKE "%OOM%")
 | search _raw LIKE "%error%"
+| spath path="error.message" output=error_message
+| search error_message="*"
