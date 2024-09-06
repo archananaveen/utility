@@ -1,0 +1,6 @@
+curl \
+  --header "Authorization: Bearer <your_api_token>" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request POST \
+  --data @module-publish.json \
+  https://app.terraform.io/api/v2/organizations/<your_organization>/registry-modules
