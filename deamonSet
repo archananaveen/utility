@@ -115,3 +115,24 @@ subjects:
 - kind: ServiceAccount
   name: fluent-bit
   namespace: logging
+
+
+
+[INPUT]
+    Name   tail
+    Path   /var/log/your-log-file.log
+    Tag    your-tag
+
+[FILTER]
+    Name   record_modifier
+    Match  *
+    Record hostname ${HOSTNAME}
+
+[OUTPUT]
+    Name   http
+    Match  *
+    Host   splunk-host
+    Port   8088
+    URI    /services/collector/event
+    HTTP_User your-splunk-token
+    Format json
