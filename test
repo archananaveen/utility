@@ -12,3 +12,11 @@ index="your_index" sourcetype="your_sourcetype"
 | search _raw LIKE "%error%"
 | spath path="error.message" output=error_message
 | search error_message="*"
+
+
+index=<your_index> sourcetype=<your_sourcetype>
+| spath input=message path="inner_data.event" output=inner_event
+| spath input=message path="inner_data.user.name" output=user_name
+| spath input=message path="inner_data.user.id" output=user_id
+| spath input=message path="inner_data.status" output=inner_status
+| table outer_event outer_status inner_event user_name user_id inner_status
