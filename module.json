@@ -1,0 +1,24 @@
+{
+  "provider": {
+    "harness": {
+      "endpoint": "https://app.harness.io/gateway",
+      "account_id": "${var.account_id}",
+      "api_key": "${var.api_key}"
+    }
+  },
+  "resource": {
+    "harness_application": {
+      "example_app": {
+        "name": "${var.app_name}",
+        "description": "${var.app_description}"
+      }
+    },
+    "harness_service": {
+      "example_service": {
+        "app_id": "${harness_application.example_app.id}",
+        "name": "${var.service_name}",
+        "type": "SSH"
+      }
+    }
+  }
+}
