@@ -35,65 +35,50 @@ def get_workspace_runs(workspace_id):
     response.raise_for_status()
     return response.json()['data']
 
-# Main function to calculate the durations for each stage of all runs
-def calculate_stage_durations():
-    total_plan_time = 0.0
-    total_apply_time = 0.0
+# Main function to calculate the durations for each stage of all runs and write to a file
+def calculate_and_write_stage_durations(output_file):
     total_runs = 0
-    plan_durations = []
-    apply_durations = []
 
-    # Fetch all workspaces
-    workspaces = get_workspaces()
-    for workspace in workspaces:
-        workspace_id = workspace['id']
-        print(f"Fetching runs for workspace: {workspace['attributes']['name']}")
+    # Open the output file
+    with open(output_file, 'w') as file:
+        # Write the header
+        file.write(f"Workspace, Run ID, Plan Duration (minutes), Apply Duration (minutes)\n")
 
-        # Fetch all runs for this workspace
-        runs = get_workspace_runs(workspace_id)
+        # Fetch all workspaces
+        workspaces = get_workspaces()
+        for workspace in workspaces:
+            workspace_id = workspace['id']
+            workspace_name = workspace['attributes']['name']
+            file.write(f"\nFetching runs for workspace: {workspace_name}\n")
 
-        # Calculate the duration for each stage (plan and apply) for each run
-        for run in runs:
-            timestamps = run['attributes']['status-timestamps']
+            # Fetch all runs for this workspace
+            runs = get_workspace_runs(workspace_id)
 
-            # Calculate plan duration
-            plan_start = timestamps.get('plan-started-at')
-            plan_end = timestamps.get('plan-completed-at')
-            plan_duration = calculate_duration(plan_start, plan_end)
-            if plan_duration:
-                total_plan_time += plan_duration
-                plan_durations.append(plan_duration)
+            # Calculate the duration for each stage (plan and apply) for each run
+            for run in runs:
+                timestamps = run['attributes']['status-timestamps']
+                run_id = run['id']
 
-            # Calculate apply duration
-            apply_start = timestamps.get('apply-started-at')
-            apply_end = timestamps.get('apply-completed-at')
-            apply_duration = calculate_duration(apply_start, apply_end)
-            if apply_duration:
-                total_apply_time += apply_duration
-                apply_durations.append(apply_duration)
+                # Calculate plan duration
+                plan_start = timestamps.get('plan-started-at')
+                plan_end = timestamps.get('plan-completed-at')
+                plan_duration = calculate_duration(plan_start, plan_end)
 
-            total_runs += 1
+                # Calculate apply duration
+                apply_start = timestamps.get('apply-started-at')
+                apply_end = timestamps.get('apply-completed-at')
+                apply_duration = calculate_duration(apply_start, apply_end)
 
-    # Summary of the results
-    if total_runs > 0:
-        average_plan_time = total_plan_time / total_runs if total_plan_time else 0
-        average_apply_time = total_apply_time / total_runs if total_apply_time else 0
-        print(f"Total number of runs: {total_runs}")
-        print(f"Total plan time: {total_plan_time:.2f} minutes")
-        print(f"Average plan time per run: {average_plan_time:.2f} minutes")
-        print(f"Total apply time: {total_apply_time:.2f} minutes")
-        print(f"Average apply time per run: {average_apply_time:.2f} minutes")
-        
-        # Optionally, print longest and shortest times
-        if plan_durations:
-            print(f"Longest plan duration: {max(plan_durations):.2f} minutes")
-            print(f"Shortest plan duration: {min(plan_durations):.2f} minutes")
-        if apply_durations:
-            print(f"Longest apply duration: {max(apply_durations):.2f} minutes")
-            print(f"Shortest apply duration: {min(apply_durations):.2f} minutes")
-    else:
-        print("No runs found.")
+                # Write the result for this run to the file
+                file.write(f"{workspace_name}, {run_id}, {plan_duration if plan_duration else 'N/A'}, {apply_duration if apply_duration else 'N/A'}\n")
+
+                total_runs += 1
+
+        file.write(f"\nTotal number of runs processed: {total_runs}\n")
+
+    print(f"Results written to {output_file}")
 
 # Execute the script
 if __name__ == "__main__":
-    calculate_stage_durations()
+    output_file = "terraform_run_durations.csv"  # The output file path
+    calculate_and_write_stage_durations(output_file)
