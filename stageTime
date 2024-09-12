@@ -42,14 +42,13 @@ def calculate_and_write_stage_durations(output_file):
     # Open the output file
     with open(output_file, 'w') as file:
         # Write the header
-        file.write(f"Workspace, Run ID, Plan Duration (minutes), Apply Duration (minutes)\n")
+        file.write(f"Workspace, Run ID, Run Status, Plan Duration (minutes), Apply Duration (minutes)\n")
 
         # Fetch all workspaces
         workspaces = get_workspaces()
         for workspace in workspaces:
             workspace_id = workspace['id']
             workspace_name = workspace['attributes']['name']
-            file.write(f"\nFetching runs for workspace: {workspace_name}\n")
 
             # Fetch all runs for this workspace
             runs = get_workspace_runs(workspace_id)
@@ -58,6 +57,7 @@ def calculate_and_write_stage_durations(output_file):
             for run in runs:
                 timestamps = run['attributes']['status-timestamps']
                 run_id = run['id']
+                run_status = run['attributes']['status']
 
                 # Calculate plan duration
                 plan_start = timestamps.get('plan-started-at')
@@ -70,7 +70,9 @@ def calculate_and_write_stage_durations(output_file):
                 apply_duration = calculate_duration(apply_start, apply_end)
 
                 # Write the result for this run to the file
-                file.write(f"{workspace_name}, {run_id}, {plan_duration if plan_duration else 'N/A'}, {apply_duration if apply_duration else 'N/A'}\n")
+                file.write(f"{workspace_name}, {run_id}, {run_status}, "
+                           f"{plan_duration if plan_duration else 'N/A'}, "
+                           f"{apply_duration if apply_duration else 'N/A'}\n")
 
                 total_runs += 1
 
@@ -80,5 +82,5 @@ def calculate_and_write_stage_durations(output_file):
 
 # Execute the script
 if __name__ == "__main__":
-    output_file = "terraform_run_durations.csv"  # The output file path
+    output_file = "terraform_run_durations_with_status.csv"  # The output file path
     calculate_and_write_stage_durations(output_file)
