@@ -87,6 +87,39 @@ def gather_and_write_timestamps(output_file):
 
     print(f"Results written to {output_file}")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from dateutil import parser
+
+# Example ISO 8601 date-time strings with timezone information
+start_time_str = "2023-09-01T10:00:00+00:00"
+end_time_str = "2023-09-01T11:15:00+00:00"
+
+# Parse the date-time strings using dateutil.parser
+start_time = parser.parse(start_time_str)
+end_time = parser.parse(end_time_str)
+
+# Calculate the difference between the two datetime objects
+duration = end_time - start_time
+
+# Convert the difference to minutes
+duration_in_minutes = duration.total_seconds() / 60
+
+print(f"Duration: {duration}, Duration in Minutes: {duration_in_minutes}")
+
+
 # Execute the script
 if __name__ == "__main__":
     output_file = "terraform_run_status_timestamps.csv"  # The output file path
