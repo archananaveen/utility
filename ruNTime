@@ -1,0 +1,81 @@
+import requests
+from datetime import datetime
+
+# Replace these with your actual Terraform Enterprise details
+API_TOKEN = "your-api-token"  # Terraform Enterprise API token
+ORG_NAME = "your-organization-name"  # Terraform Enterprise organization name
+BASE_URL = "https://app.terraform.io/api/v2"
+
+# Set up the headers for the requests
+HEADERS = {
+    "Authorization": f"Bearer {API_TOKEN}",
+    "Content-Type": "application/vnd.api+json"
+}
+
+# Helper function to calculate the duration of a run in minutes
+def calculate_duration(run):
+    try:
+        start_time = datetime.fromisoformat(run['attributes']['status-timestamps']['plan-queued-at'].replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(run['attributes']['status-timestamps']['apply-completed-at'].replace('Z', '+00:00'))
+        duration = end_time - start_time
+        return duration.total_seconds() / 60  # Return the duration in minutes
+    except (KeyError, TypeError):
+        return None
+
+# Function to fetch all workspaces for the organization
+def get_workspaces():
+    url = f"{BASE_URL}/organizations/{ORG_NAME}/workspaces"
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+    return response.json()['data']
+
+# Function to fetch all runs for a given workspace
+def get_workspace_runs(workspace_id):
+    url = f"{BASE_URL}/workspaces/{workspace_id}/runs"
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+    return response.json()['data']
+
+# Main function to fetch all runs for all workspaces and calculate the time taken for each run
+def calculate_run_durations():
+    total_runs = 0
+    total_duration = 0.0
+    longest_run = {"duration": 0, "run_id": None, "workspace_id": None}
+    
+    # Fetch all workspaces
+    workspaces = get_workspaces()
+    for workspace in workspaces:
+        workspace_id = workspace['id']
+        print(f"Fetching runs for workspace: {workspace['attributes']['name']}")
+        
+        # Fetch all runs for this workspace
+        runs = get_workspace_runs(workspace_id)
+        
+        # Calculate the duration of each run
+        for run in runs:
+            duration = calculate_duration(run)
+            if duration:
+                total_runs += 1
+                total_duration += duration
+                
+                # Check for the longest run
+                if duration > longest_run["duration"]:
+                    longest_run = {
+                        "duration": duration,
+                        "run_id": run["id"],
+                        "workspace_id": workspace_id
+                    }
+
+    # Summary of the results
+    if total_runs > 0:
+        average_duration = total_duration / total_runs
+        print(f"Total number of runs: {total_runs}")
+        print(f"Total time across all runs: {total_duration:.2f} minutes")
+        print(f"Average time per run: {average_duration:.2f} minutes")
+        print(f"Longest run: Run ID {longest_run['run_id']} in workspace {longest_run['workspace_id']} with a duration of {longest_run['duration']:.2f} minutes")
+    else:
+        print("No runs found.")
+
+# Execute the script
+if __name__ == "__main__":
+    calculate_run_durations()
