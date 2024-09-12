@@ -20,3 +20,8 @@ index=<your_index> sourcetype=<your_sourcetype>
 | spath input=message path="inner_data.user.id" output=user_id
 | spath input=message path="inner_data.status" output=inner_status
 | table outer_event outer_status inner_event user_name user_id inner_status
+
+
+# Parse the ISO 8601 date-time strings using strptime
+start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%S')
+end_time = datetime.strptime(end_time_str, '%Y-%m-%dT%H:%M:%S')
