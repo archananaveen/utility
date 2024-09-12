@@ -1,9 +1,8 @@
 import requests
 from datetime import datetime
 
-# Replace these with your actual Terraform Enterprise details
+# Replace these with your actual Terraform Enterprise API token and base URL
 API_TOKEN = "your-api-token"  # Terraform Enterprise API token
-ORG_NAME = "your-organization-name"  # Terraform Enterprise organization name
 BASE_URL = "https://app.terraform.io/api/v2"
 
 # Set up the headers for the requests
@@ -12,18 +11,16 @@ HEADERS = {
     "Content-Type": "application/vnd.api+json"
 }
 
-# Helper function to calculate the duration between two timestamps
-def calculate_duration(start_time, end_time):
-    if not start_time or not end_time:
-        return None
-    start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-    end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-    duration = end_time - start_time
-    return duration.total_seconds() / 60  # Return the duration in minutes
+# Function to fetch all organizations
+def get_organizations():
+    url = f"{BASE_URL}/organizations"
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+    return response.json()['data']
 
-# Function to fetch all workspaces for the organization
-def get_workspaces():
-    url = f"{BASE_URL}/organizations/{ORG_NAME}/workspaces"
+# Function to fetch all workspaces for an organization
+def get_workspaces(organization_name):
+    url = f"{BASE_URL}/organizations/{organization_name}/workspaces"
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
     return response.json()['data']
@@ -35,46 +32,56 @@ def get_workspace_runs(workspace_id):
     response.raise_for_status()
     return response.json()['data']
 
-# Main function to calculate the durations for each stage of all runs and write to a file
-def calculate_and_write_stage_durations(output_file):
+# Helper function to handle missing timestamps
+def get_timestamp(timestamps, key):
+    return timestamps.get(key, 'N/A')
+
+# Main function to gather all timestamps and write them to a file
+def gather_and_write_timestamps(output_file):
     total_runs = 0
 
     # Open the output file
     with open(output_file, 'w') as file:
         # Write the header
-        file.write(f"Workspace, Run ID, Run Status, Plan Duration (minutes), Apply Duration (minutes)\n")
+        file.write(f"Organization, Workspace, Run ID, Run Status, Plan Started At, Plan Completed At, "
+                   f"Apply Started At, Apply Completed At, Plan Queued At, Apply Queued At\n")
 
-        # Fetch all workspaces
-        workspaces = get_workspaces()
-        for workspace in workspaces:
-            workspace_id = workspace['id']
-            workspace_name = workspace['attributes']['name']
+        # Fetch all organizations
+        organizations = get_organizations()
+        for organization in organizations:
+            org_name = organization['attributes']['name']
+            print(f"Fetching workspaces for organization: {org_name}")
 
-            # Fetch all runs for this workspace
-            runs = get_workspace_runs(workspace_id)
+            # Fetch all workspaces for this organization
+            workspaces = get_workspaces(org_name)
+            for workspace in workspaces:
+                workspace_id = workspace['id']
+                workspace_name = workspace['attributes']['name']
 
-            # Calculate the duration for each stage (plan and apply) for each run
-            for run in runs:
-                timestamps = run['attributes']['status-timestamps']
-                run_id = run['id']
-                run_status = run['attributes']['status']
+                # Fetch all runs for this workspace
+                runs = get_workspace_runs(workspace_id)
 
-                # Calculate plan duration
-                plan_start = timestamps.get('plan-started-at')
-                plan_end = timestamps.get('plan-completed-at')
-                plan_duration = calculate_duration(plan_start, plan_end)
+                # Process each run
+                for run in runs:
+                    timestamps = run['attributes']['status-timestamps']
+                    run_id = run['id']
+                    run_status = run['attributes']['status']
 
-                # Calculate apply duration
-                apply_start = timestamps.get('apply-started-at')
-                apply_end = timestamps.get('apply-completed-at')
-                apply_duration = calculate_duration(apply_start, apply_end)
+                    # Collect all timestamps
+                    plan_started_at = get_timestamp(timestamps, 'plan-started-at')
+                    plan_completed_at = get_timestamp(timestamps, 'plan-completed-at')
+                    apply_started_at = get_timestamp(timestamps, 'apply-started-at')
+                    apply_completed_at = get_timestamp(timestamps, 'apply-completed-at')
+                    plan_queued_at = get_timestamp(timestamps, 'plan-queued-at')
+                    apply_queued_at = get_timestamp(timestamps, 'apply-queued-at')
 
-                # Write the result for this run to the file
-                file.write(f"{workspace_name}, {run_id}, {run_status}, "
-                           f"{plan_duration if plan_duration else 'N/A'}, "
-                           f"{apply_duration if apply_duration else 'N/A'}\n")
+                    # Write the result for this run to the file
+                    file.write(f"{org_name}, {workspace_name}, {run_id}, {run_status}, "
+                               f"{plan_started_at}, {plan_completed_at}, "
+                               f"{apply_started_at}, {apply_completed_at}, "
+                               f"{plan_queued_at}, {apply_queued_at}\n")
 
-                total_runs += 1
+                    total_runs += 1
 
         file.write(f"\nTotal number of runs processed: {total_runs}\n")
 
@@ -82,5 +89,5 @@ def calculate_and_write_stage_durations(output_file):
 
 # Execute the script
 if __name__ == "__main__":
-    output_file = "terraform_run_durations_with_status.csv"  # The output file path
-    calculate_and_write_stage_durations(output_file)
+    output_file = "terraform_run_status_timestamps.csv"  # The output file path
+    gather_and_write_timestamps(output_file)
